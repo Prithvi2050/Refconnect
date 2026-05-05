@@ -11,6 +11,7 @@ type Job = {
   description?: string;
   jobLink: string;
   daysLeft: number;
+  expiresAt?: string;
   status: "active" | "expired";
 };
 
@@ -35,19 +36,39 @@ const fallbackJobs: Job[] = [
   },
 ];
 
+const getDaysLeft = (job: Job) => {
+  if (!job.expiresAt) {
+    return job.daysLeft;
+  }
+
+  const diffMs = new Date(job.expiresAt).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+};
+
+const normalizeJobs = (jobList: Job[]) => {
+  return jobList.map((job) => {
+    const daysLeft = getDaysLeft(job);
+
+    return {
+      ...job,
+      daysLeft,
+      status: daysLeft <= 0 ? "expired" as const : "active" as const,
+    };
+  });
+};
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
 
   useEffect(() => {
     const savedJobs = localStorage.getItem("refconnect_jobs");
 
-    if (savedJobs) {
-      const parsedJobs: Job[] = JSON.parse(savedJobs);
-      setJobs(parsedJobs.filter((job) => job.status === "active"));
-    } else {
-      localStorage.setItem("refconnect_jobs", JSON.stringify(fallbackJobs));
-      setJobs(fallbackJobs);
-    }
+const loadedJobs: Job[] = savedJobs ? JSON.parse(savedJobs) : fallbackJobs;
+const normalizedJobs = normalizeJobs(loadedJobs);
+
+localStorage.setItem("refconnect_jobs", JSON.stringify(normalizedJobs));
+
+setJobs(normalizedJobs.filter((job) => job.status === "active"));
   }, []);
 
   return (

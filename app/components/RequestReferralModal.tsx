@@ -1,6 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState, type SubmitEventHandler } from "react";
+
+type UserRole = "candidate" | "employee";
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  roles?: UserRole[];
+  role?: UserRole;
+  company?: string;
+  linkedinUrl?: string;
+  resumeLink?: string;
+};
 
 type Props = {
   jobId: string;
@@ -11,7 +25,11 @@ type Props = {
 
 type ReferralRequest = {
   id: string;
+  candidateId?: string;
   candidateName: string;
+  candidateEmail?: string;
+  candidateLinkedin?: string;
+  candidateMessage?: string;
   jobId: string;
   jobTitle: string;
   company: string;
@@ -22,6 +40,20 @@ type ReferralRequest = {
   referralLink?: string;
   employeeMessage?: string;
 };
+
+function getUserRoles(user: User | null): UserRole[] {
+  if (!user) return [];
+
+  if (user.roles) {
+    return user.roles;
+  }
+
+  if (user.role) {
+    return [user.role];
+  }
+
+  return [];
+}
 
 export default function RequestReferralModal({
   jobId,
@@ -34,8 +66,31 @@ export default function RequestReferralModal({
   const [linkedinLink, setLinkedinLink] = useState("");
   const [message, setMessage] = useState("");
   const [alreadyRequested, setAlreadyRequested] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const roles = getUserRoles(currentUser);
+  const canRequestReferral = roles.includes("candidate");
 
   useEffect(() => {
+    const savedUser = localStorage.getItem("refconnect_current_user");
+
+    if (savedUser) {
+      const parsedUser: User = JSON.parse(savedUser);
+      setCurrentUser(parsedUser);
+
+      if (parsedUser.resumeLink) {
+        setResumeLink(parsedUser.resumeLink);
+      }
+
+      if (parsedUser.linkedinUrl) {
+        setLinkedinLink(parsedUser.linkedinUrl);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
     const savedRequests = localStorage.getItem("refconnect_requests");
 
     if (!savedRequests) {
@@ -44,26 +99,52 @@ export default function RequestReferralModal({
 
     const existingRequests: ReferralRequest[] = JSON.parse(savedRequests);
 
-    const duplicateRequest = existingRequests.some(
-      (request) =>
-        request.jobId === jobId && request.candidateName === "Demo Candidate"
-    );
+    const duplicateRequest = existingRequests.some((request) => {
+      const sameJob = request.jobId === jobId;
+
+      const sameCandidateById =
+        request.candidateId && request.candidateId === currentUser.id;
+
+      const sameCandidateByEmail =
+        request.candidateEmail?.toLowerCase() ===
+        currentUser.email.toLowerCase();
+
+      return sameJob && (sameCandidateById || sameCandidateByEmail);
+    });
 
     setAlreadyRequested(duplicateRequest);
-  }, [jobId]);
+  }, [currentUser, jobId]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
+
+    if (!currentUser) {
+      alert("Please login or sign up before requesting a referral.");
+      return;
+    }
+
+    if (!canRequestReferral) {
+      alert("Your current account is not set up to request referrals.");
+      return;
+    }
 
     const savedRequests = localStorage.getItem("refconnect_requests");
     const existingRequests: ReferralRequest[] = savedRequests
       ? JSON.parse(savedRequests)
       : [];
 
-    const duplicateRequest = existingRequests.some(
-      (request) =>
-        request.jobId === jobId && request.candidateName === "Demo Candidate"
-    );
+    const duplicateRequest = existingRequests.some((request) => {
+      const sameJob = request.jobId === jobId;
+
+      const sameCandidateById =
+        request.candidateId && request.candidateId === currentUser.id;
+
+      const sameCandidateByEmail =
+        request.candidateEmail?.toLowerCase() ===
+        currentUser.email.toLowerCase();
+
+      return sameJob && (sameCandidateById || sameCandidateByEmail);
+    });
 
     if (duplicateRequest) {
       setAlreadyRequested(true);
@@ -73,7 +154,11 @@ export default function RequestReferralModal({
 
     const newRequest: ReferralRequest = {
       id: Date.now().toString(),
-      candidateName: "Demo Candidate",
+      candidateId: currentUser.id,
+      candidateName: currentUser.name,
+      candidateEmail: currentUser.email,
+      candidateLinkedin: linkedinLink,
+      candidateMessage: message,
       jobId,
       jobTitle,
       company,
@@ -81,7 +166,6 @@ export default function RequestReferralModal({
       resumeLink,
       linkedinLink,
       status: "pending",
-      employeeMessage: message,
     };
 
     const updatedRequests = [newRequest, ...existingRequests];
@@ -96,10 +180,33 @@ export default function RequestReferralModal({
     alert("Referral request submitted!");
 
     setOpen(false);
-    setResumeLink("");
-    setLinkedinLink("");
     setMessage("");
   };
+
+  if (!currentUser) {
+    return (
+      <div className="mt-6 rounded border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+        Please{" "}
+        <Link href="/auth/login" className="underline">
+          login
+        </Link>{" "}
+        or{" "}
+        <Link href="/auth/signup" className="underline">
+          sign up
+        </Link>{" "}
+        to request a referral.
+      </div>
+    );
+  }
+
+  if (!canRequestReferral) {
+    return (
+      <div className="mt-6 rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+        This account is set up for giving referrals only. To request referrals,
+        use a candidate or both-role account.
+      </div>
+    );
+  }
 
   if (alreadyRequested) {
     return (
@@ -123,13 +230,22 @@ export default function RequestReferralModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
             <h2 className="text-xl font-bold">Request Referral</h2>
+
             <p className="mt-1 text-sm text-gray-600">{jobTitle}</p>
+
+            <p className="mt-2 text-sm text-gray-500">
+              Requesting as:{" "}
+              <span className="font-medium text-gray-700">
+                {currentUser.name}
+              </span>
+            </p>
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Resume Link
                 </label>
+
                 <input
                   type="url"
                   value={resumeLink}
@@ -144,6 +260,7 @@ export default function RequestReferralModal({
                 <label className="block text-sm font-medium mb-1">
                   LinkedIn Link
                 </label>
+
                 <input
                   type="url"
                   value={linkedinLink}
@@ -156,14 +273,15 @@ export default function RequestReferralModal({
 
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Message (optional)
+                  Message to employee (optional)
                 </label>
+
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="w-full rounded border px-3 py-2"
                   rows={4}
-                  placeholder="Write a short note..."
+                  placeholder="Write a short note about why you are a good fit..."
                 />
               </div>
 

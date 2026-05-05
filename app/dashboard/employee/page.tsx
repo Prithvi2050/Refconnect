@@ -12,6 +12,7 @@ type Job = {
   description?: string;
   jobLink: string;
   daysLeft: number;
+  expiresAt?: string;
   status: JobStatus;
 };
 
@@ -19,7 +20,11 @@ type RequestStatus = "pending" | "approved" | "rejected" | "applied";
 
 type ReferralRequest = {
   id: string;
+  candidateId?: string;
   candidateName: string;
+  candidateEmail?: string;
+  candidateLinkedin?: string;
+  candidateMessage?: string;
   jobId: string;
   jobTitle: string;
   jobLink: string;
@@ -106,6 +111,33 @@ function getRequestStatusClasses(status: RequestStatus) {
   return "bg-red-100 text-red-700";
 }
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+const createExpiryDate = () => {
+  return new Date(Date.now() + SEVEN_DAYS_MS).toISOString();
+};
+
+const getDaysLeft = (job: Job) => {
+  if (!job.expiresAt) {
+    return job.daysLeft;
+  }
+
+  const diffMs = new Date(job.expiresAt).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+};
+
+const normalizeJobs = (jobList: Job[]) => {
+  return jobList.map((job) => {
+    const daysLeft = getDaysLeft(job);
+
+    return {
+      ...job,
+      daysLeft,
+      status: daysLeft <= 0 ? "expired" : "active",
+    };
+  });
+};
+
 export default function EmployeeDashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [requests, setRequests] = useState<ReferralRequest[]>([]);
@@ -131,14 +163,13 @@ export default function EmployeeDashboardPage() {
     const [newJobLink, setNewJobLink] = useState("");
 
   useEffect(() => {
-  const savedJobs = localStorage.getItem("refconnect_jobs");
+const savedJobs = localStorage.getItem("refconnect_jobs");
 
-  if (savedJobs) {
-    setJobs(JSON.parse(savedJobs));
-  } else {
-    setJobs(initialJobs);
-    localStorage.setItem("refconnect_jobs", JSON.stringify(initialJobs));
-  }
+const loadedJobs: Job[] = savedJobs ? JSON.parse(savedJobs) : initialJobs;
+const normalizedJobs = normalizeJobs(loadedJobs);
+
+setJobs(normalizedJobs);
+localStorage.setItem("refconnect_jobs", JSON.stringify(normalizedJobs));
 
   const savedRequests = localStorage.getItem("refconnect_requests");
 
@@ -154,8 +185,10 @@ export default function EmployeeDashboardPage() {
 }, []);
 
 const saveJobs = (updatedJobs: Job[]) => {
-  setJobs(updatedJobs);
-  localStorage.setItem("refconnect_jobs", JSON.stringify(updatedJobs));
+  const normalizedJobs = normalizeJobs(updatedJobs);
+
+  setJobs(normalizedJobs);
+  localStorage.setItem("refconnect_jobs", JSON.stringify(normalizedJobs));
 };
 
 const saveRequests = (updatedRequests: ReferralRequest[]) => {
@@ -173,7 +206,7 @@ const saveRequests = (updatedRequests: ReferralRequest[]) => {
       return;
     }
 
- const newJob: Job = {
+const newJob: Job = {
   id: Date.now().toString(),
   title: newJobTitle,
   company: newJobCompany,
@@ -181,6 +214,7 @@ const saveRequests = (updatedRequests: ReferralRequest[]) => {
   description: newJobDescription,
   jobLink: newJobLink,
   daysLeft: 7,
+  expiresAt: createExpiryDate(),
   status: "active",
 };
 
@@ -194,15 +228,20 @@ setNewJobLink("");
 setIsAddJobOpen(false);
   };
 
-  const reactivateJob = (jobId: string) => {
-    const updatedJobs = jobs.map((job) =>
-      job.id === jobId
-        ? { ...job, status: "active" as JobStatus, daysLeft: 7 }
-        : job
-    );
+ const reactivateJob = (jobId: string) => {
+  const updatedJobs = jobs.map((job) =>
+    job.id === jobId
+      ? {
+          ...job,
+          status: "active" as JobStatus,
+          daysLeft: 7,
+          expiresAt: createExpiryDate(),
+        }
+      : job
+  );
 
-    saveJobs(updatedJobs);
-  };
+  saveJobs(updatedJobs);
+};
 
   const deleteJob = (jobId: string) => {
     const updatedJobs = jobs.filter((job) => job.id !== jobId);
@@ -392,7 +431,13 @@ setIsAddJobOpen(false);
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="font-semibold">{request.candidateName}</h3>
-                  <p className="text-sm text-gray-600">{request.jobTitle}</p>
+
+{request.candidateEmail && (
+  <p className="text-sm text-gray-500">{request.candidateEmail}</p>
+)}
+
+<p className="text-sm text-gray-600">{request.jobTitle}</p>
+                  
 
                   <div className="mt-3 flex flex-wrap gap-3 text-sm">
                     <a
@@ -422,6 +467,12 @@ setIsAddJobOpen(false);
                       Job Link
                     </a>
                   </div>
+
+                  {request.candidateMessage && (
+  <p className="mt-3 rounded bg-blue-50 p-3 text-sm text-blue-800">
+    Candidate note: {request.candidateMessage}
+  </p>
+)}
 
                   {request.employeeMessage && (
                     <p className="mt-3 rounded bg-gray-50 p-3 text-sm text-gray-700">

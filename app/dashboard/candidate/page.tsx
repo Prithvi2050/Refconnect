@@ -1,5 +1,7 @@
 "use client";
 
+import RequireRole from "../../components/RequireRole";
+
 import { useEffect, useState } from "react";
 
 type RequestStatus = "pending" | "approved" | "rejected" | "applied";
@@ -55,6 +57,7 @@ export default function CandidateDashboardPage() {
   };
 
   return (
+     <RequireRole role="candidate">
     <div className="p-6 max-w-5xl mx-auto">
       <div>
         <p className="text-sm text-gray-500">Candidate Dashboard</p>
@@ -166,6 +169,7 @@ export default function CandidateDashboardPage() {
           ))}
         </div>
       )}
-    </div>
+       </div>
+  </RequireRole>
   );
 }

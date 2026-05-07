@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type UserRole = "candidate" | "employee";
 
@@ -15,8 +15,24 @@ type User = {
   company?: string;
 };
 
+function getUserRoles(user: User | null): UserRole[] {
+  if (!user) return [];
+
+  if (user.roles) {
+    return user.roles;
+  }
+
+  if (user.role) {
+    return [user.role];
+  }
+
+  return [];
+}
+
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -24,11 +40,12 @@ export default function Navbar() {
 
     if (savedUser) {
       setCurrentUser(JSON.parse(savedUser));
+    } else {
+      setCurrentUser(null);
     }
-  }, []);
+  }, [pathname]);
 
-  const roles =
-    currentUser?.roles || (currentUser?.role ? [currentUser.role] : []);
+  const roles = getUserRoles(currentUser);
 
   const logout = () => {
     localStorage.removeItem("refconnect_current_user");
@@ -48,22 +65,14 @@ export default function Navbar() {
             Jobs
           </Link>
 
-          {currentUser && (
-            <Link href="/dashboard">
-              Dashboard
-            </Link>
-          )}
+          {currentUser && <Link href="/dashboard">Dashboard</Link>}
 
           {roles.includes("candidate") && (
-            <Link href="/dashboard/candidate">
-              Candidate Dashboard
-            </Link>
+            <Link href="/dashboard/candidate">Candidate Dashboard</Link>
           )}
 
           {roles.includes("employee") && (
-            <Link href="/dashboard/employee">
-              Employee Dashboard
-            </Link>
+            <Link href="/dashboard/employee">Employee Dashboard</Link>
           )}
 
           {!currentUser ? (

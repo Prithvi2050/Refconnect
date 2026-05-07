@@ -21,6 +21,8 @@ type Props = {
   jobTitle: string;
   company: string;
   jobLink: string;
+  jobOwnerId?: string;
+  jobOwnerEmail?: string;
 };
 
 type ReferralRequest = {
@@ -60,7 +62,10 @@ export default function RequestReferralModal({
   jobTitle,
   company,
   jobLink,
+  jobOwnerId,
+  jobOwnerEmail,
 }: Props) {
+
   const [open, setOpen] = useState(false);
   const [resumeLink, setResumeLink] = useState("");
   const [linkedinLink, setLinkedinLink] = useState("");
@@ -70,6 +75,12 @@ export default function RequestReferralModal({
 
   const roles = getUserRoles(currentUser);
   const canRequestReferral = roles.includes("candidate");
+
+  const isOwnJob =
+  currentUser &&
+  ((jobOwnerId && currentUser.id === jobOwnerId) ||
+    (jobOwnerEmail &&
+      currentUser.email.toLowerCase() === jobOwnerEmail.toLowerCase()));
 
   useEffect(() => {
     const savedUser = localStorage.getItem("refconnect_current_user");
@@ -122,6 +133,11 @@ export default function RequestReferralModal({
       alert("Please login or sign up before requesting a referral.");
       return;
     }
+
+    if (isOwnJob) {
+  alert("You cannot request a referral for your own job post.");
+  return;
+}
 
     if (!canRequestReferral) {
       alert("Your current account is not set up to request referrals.");
@@ -207,6 +223,14 @@ export default function RequestReferralModal({
       </div>
     );
   }
+
+  if (isOwnJob) {
+  return (
+    <div className="mt-6 rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+      You posted this job. You can manage it from your Employee Dashboard.
+    </div>
+  );
+}
 
   if (alreadyRequested) {
     return (

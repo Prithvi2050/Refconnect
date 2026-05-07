@@ -1,4 +1,8 @@
+
+
 "use client";
+
+import RequireRole from "../../components/RequireRole";
 
 import { useEffect, useState, type SubmitEventHandler } from "react";
 
@@ -14,6 +18,20 @@ type Job = {
   daysLeft: number;
   expiresAt?: string;
   status: JobStatus;
+  createdById?: string;
+  createdByName?: string;
+  createdByEmail?: string;
+};
+
+type UserRole = "candidate" | "employee";
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  roles?: UserRole[];
+  role?: UserRole;
+  company?: string;
 };
 
 type RequestStatus = "pending" | "approved" | "rejected" | "applied";
@@ -141,6 +159,7 @@ const normalizeJobs = (jobList: Job[]) => {
 export default function EmployeeDashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [requests, setRequests] = useState<ReferralRequest[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [selectedFilter, setSelectedFilter] = useState<"all" | RequestStatus>(
     "all"
@@ -163,6 +182,11 @@ export default function EmployeeDashboardPage() {
     const [newJobLink, setNewJobLink] = useState("");
 
   useEffect(() => {
+    const savedUser = localStorage.getItem("refconnect_current_user");
+
+if (savedUser) {
+  setCurrentUser(JSON.parse(savedUser));
+}
 const savedJobs = localStorage.getItem("refconnect_jobs");
 
 const loadedJobs: Job[] = savedJobs ? JSON.parse(savedJobs) : initialJobs;
@@ -216,8 +240,10 @@ const newJob: Job = {
   daysLeft: 7,
   expiresAt: createExpiryDate(),
   status: "active",
+  createdById: currentUser?.id,
+  createdByName: currentUser?.name,
+  createdByEmail: currentUser?.email,
 };
-
     saveJobs([newJob, ...jobs]);
 
 setNewJobTitle("");
@@ -299,17 +325,42 @@ setIsAddJobOpen(false);
   setEmployeeMessage("");
 };
 
-  const filteredRequests =
-    selectedFilter === "all"
-      ? requests
-      : requests.filter((request) => request.status === selectedFilter);
+const myJobs = jobs.filter((job) => {
+  if (!currentUser) return true;
 
-  const activeJobsCount = jobs.filter((job) => job.status === "active").length;
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const approvedCount = requests.filter((r) => r.status === "approved").length;
-  const appliedCount = requests.filter((r) => r.status === "applied").length;
+  // Older demo jobs may not have createdById, so keep them visible for now.
+  if (!job.createdById) return true;
 
-  return (
+  return job.createdById === currentUser.id;
+});
+
+const myJobIds = new Set(myJobs.map((job) => job.id));
+
+const visibleRequests = requests.filter((request) =>
+  myJobIds.has(request.jobId)
+);
+
+const filteredRequests =
+  selectedFilter === "all"
+    ? visibleRequests
+    : visibleRequests.filter((request) => request.status === selectedFilter);
+
+const activeJobsCount = myJobs.filter((job) => job.status === "active").length;
+
+const pendingCount = visibleRequests.filter(
+  (request) => request.status === "pending"
+).length;
+
+const approvedCount = visibleRequests.filter(
+  (request) => request.status === "approved"
+).length;
+
+const appliedCount = visibleRequests.filter(
+  (request) => request.status === "applied"
+).length;
+
+ return (
+  <RequireRole role="employee">
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -351,7 +402,7 @@ setIsAddJobOpen(false);
         <h2 className="text-xl font-bold">My Jobs</h2>
 
         <div className="mt-4 grid gap-4">
-          {jobs.map((job) => (
+          {myJobs.map((job) => (
             <div
               key={job.id}
               className="rounded-lg border p-5 shadow-sm flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
@@ -762,6 +813,7 @@ setIsAddJobOpen(false);
           </div>
         </div>
       )}
-    </div>
+       </div>
+  </RequireRole>
   );
 }

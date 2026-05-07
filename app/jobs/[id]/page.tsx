@@ -11,12 +11,15 @@ type Job = {
   title: string;
   company: string;
   location: string;
-  jobLink: string;
   description?: string;
+  jobLink: string;
   daysLeft: number;
+  expiresAt?: string;
   status: JobStatus;
+  createdById?: string;
+  createdByName?: string;
+  createdByEmail?: string;
 };
-
 const fallbackJobs: Job[] = [
   {
     id: "1",
@@ -111,13 +114,14 @@ export default function JobDetailsPage() {
           <p className="mt-4 text-orange-500">
             Expires in {job.daysLeft} days
           </p>
-
-          <RequestReferralModal
-            jobId={job.id}
-            jobTitle={job.title}
-            company={job.company}
-            jobLink={job.jobLink}
-          />
+<RequestReferralModal
+  jobId={job.id}
+  jobTitle={job.title}
+  company={job.company}
+  jobLink={job.jobLink}
+  jobOwnerId={job.createdById}
+  jobOwnerEmail={job.createdByEmail}
+/>
         </>
       )}
     </div>

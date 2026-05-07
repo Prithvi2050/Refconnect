@@ -36,13 +36,25 @@ export default function Navbar() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("refconnect_current_user");
+    const loadCurrentUser = () => {
+      const savedUser = localStorage.getItem("refconnect_current_user");
 
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    } else {
-      setCurrentUser(null);
-    }
+      if (savedUser) {
+        setCurrentUser(JSON.parse(savedUser));
+      } else {
+        setCurrentUser(null);
+      }
+    };
+
+    loadCurrentUser();
+
+    window.addEventListener("refconnect_user_updated", loadCurrentUser);
+    window.addEventListener("storage", loadCurrentUser);
+
+    return () => {
+      window.removeEventListener("refconnect_user_updated", loadCurrentUser);
+      window.removeEventListener("storage", loadCurrentUser);
+    };
   }, [pathname]);
 
   const roles = getUserRoles(currentUser);
@@ -74,6 +86,8 @@ export default function Navbar() {
           {roles.includes("employee") && (
             <Link href="/dashboard/employee">Employee Dashboard</Link>
           )}
+
+          {currentUser && <Link href="/profile">Profile</Link>}
 
           {!currentUser ? (
             <>

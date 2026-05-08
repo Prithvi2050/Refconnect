@@ -226,14 +226,21 @@ const saveRequests = (updatedRequests: ReferralRequest[]) => {
   const submitNewJob: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
 
-    if (!newJobTitle || !newJobCompany || !newJobLink) {
-      return;
-    }
+   if (!newJobTitle || !newJobLink) {
+  return;
+}
+
+if (!currentUser || !currentUser.company) {
+  alert("Please add your company in Profile before posting a job.");
+  return;
+}
+
+const employeeCompany = currentUser.company;
 
 const newJob: Job = {
   id: Date.now().toString(),
   title: newJobTitle,
-  company: newJobCompany,
+  company: employeeCompany,
   location: newJobLocation || "Remote",
   description: newJobDescription,
   jobLink: newJobLink,
@@ -247,7 +254,7 @@ const newJob: Job = {
     saveJobs([newJob, ...jobs]);
 
 setNewJobTitle("");
-setNewJobCompany("");
+setNewJobCompany(currentUser.company);
 setNewJobLocation("");
 setNewJobDescription("");
 setNewJobLink("");
@@ -369,11 +376,19 @@ const appliedCount = visibleRequests.filter(
         </div>
 
         <button
-          onClick={() => setIsAddJobOpen(true)}
-          className="rounded bg-blue-600 px-4 py-2 text-white"
-        >
-          + Add Job
-        </button>
+  onClick={() => {
+    if (!currentUser?.company) {
+      alert("Please add your company in Profile before posting a job.");
+      return;
+    }
+
+    setNewJobCompany(currentUser.company);
+    setIsAddJobOpen(true);
+  }}
+  className="rounded bg-blue-600 px-4 py-2 text-white"
+>
+  + Add Job
+</button>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -593,18 +608,28 @@ const appliedCount = visibleRequests.filter(
 
       <form onSubmit={submitNewJob} className="mt-4 space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium">
-            Job Title
-          </label>
+  <label className="mb-1 block text-sm font-medium">
+    Company
+  </label>
 
-          <input
-            value={newJobTitle}
-            onChange={(e) => setNewJobTitle(e.target.value)}
-            className="w-full rounded border px-3 py-2"
-            placeholder="Software Engineer, Backend"
-            required
-          />
-        </div>
+  <div className="w-full rounded border bg-gray-50 px-3 py-2 text-gray-700">
+    {currentUser?.company || "Company not set"}
+  </div>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Company is locked from your profile because employees can only post roles
+    from their own company.
+  </p>
+
+  {!currentUser?.company && (
+    <a
+      href="/profile"
+      className="mt-2 inline-block text-sm text-blue-600 underline"
+    >
+      Update company in Profile
+    </a>
+  )}
+</div>
 
         <div>
           <label className="mb-1 block text-sm font-medium">

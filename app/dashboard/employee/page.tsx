@@ -144,14 +144,14 @@ const getDaysLeft = (job: Job) => {
   return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
 };
 
-const normalizeJobs = (jobList: Job[]) => {
-  return jobList.map((job) => {
+const normalizeJobs = (jobList: Job[]): Job[] => {
+  return jobList.map((job): Job => {
     const daysLeft = getDaysLeft(job);
 
     return {
       ...job,
       daysLeft,
-      status: daysLeft <= 0 ? "expired" : "active",
+      status: (daysLeft <= 0 ? "expired" : "active") as JobStatus,
     };
   });
 };

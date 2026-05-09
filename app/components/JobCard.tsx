@@ -12,12 +12,16 @@ type Job = {
   daysLeft: number;
   expiresAt?: string;
   status: JobStatus;
+  createdAt?: string;
   createdByName?: string;
+  createdByEmail?: string;
 };
 
 export default function JobCard({ job }: { job: Job }) {
   const expiryText =
     job.daysLeft === 1 ? "Expires in 1 day" : `Expires in ${job.daysLeft} days`;
+
+  const referrerName = job.createdByName || "RefConnect referrer";
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -28,6 +32,11 @@ export default function JobCard({ job }: { job: Job }) {
           <p className="mt-1 text-sm text-gray-600">
             {job.company} • {job.location || "Remote"}
           </p>
+
+          <p className="mt-2 text-sm text-gray-500">
+            Shared by{" "}
+            <span className="font-medium text-gray-800">{referrerName}</span>
+          </p>
         </div>
 
         <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
@@ -35,7 +44,7 @@ export default function JobCard({ job }: { job: Job }) {
         </span>
       </div>
 
-      <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-600">
+      <p className="mt-4 min-h-12 text-sm leading-6 text-gray-600">
         {job.description ||
           "This role was shared by an employee. Open the details page to review the job and request a referral."}
       </p>

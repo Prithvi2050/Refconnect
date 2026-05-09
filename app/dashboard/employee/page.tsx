@@ -18,6 +18,7 @@ type Job = {
   daysLeft: number;
   expiresAt?: string;
   status: JobStatus;
+  createdAt?: string;
   createdById?: string;
   createdByName?: string;
   createdByEmail?: string;
@@ -124,7 +125,7 @@ const initialRequests: ReferralRequest[] = [
 
 function getRequestStatusClasses(status: RequestStatus) {
   if (status === "pending") return "bg-yellow-100 text-yellow-700";
-  if (status === "approved") return "bg-green-100 text-green-700";
+  if (status === "approved") return "bg-green-100 text-green-0";
   if (status === "applied") return "bg-blue-100 text-blue-700";
   return "bg-red-100 text-red-700";
 }
@@ -247,9 +248,10 @@ const newJob: Job = {
   daysLeft: 7,
   expiresAt: createExpiryDate(),
   status: "active",
-  createdById: currentUser?.id,
-  createdByName: currentUser?.name,
-  createdByEmail: currentUser?.email,
+  createdAt: new Date().toISOString(),
+  createdById: currentUser.id,
+  createdByName: currentUser.name,
+  createdByEmail: currentUser.email,
 };
     saveJobs([newJob, ...jobs]);
 

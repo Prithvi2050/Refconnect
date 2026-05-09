@@ -17,6 +17,28 @@ type User = {
   resumeLink?: string;
 };
 
+const usageOptions: {
+  value: UsageType;
+  title: string;
+  description: string;
+}[] = [
+  {
+    value: "candidate",
+    title: "I want referrals",
+    description: "Browse jobs, request referrals, and track your status.",
+  },
+  {
+    value: "employee",
+    title: "I can refer others",
+    description: "Post jobs from your company and manage referral requests.",
+  },
+  {
+    value: "both",
+    title: "Both",
+    description: "Request referrals for yourself and refer candidates too.",
+  },
+];
+
 export default function SignupPage() {
   const router = useRouter();
 
@@ -45,6 +67,11 @@ export default function SignupPage() {
   const handleSignup: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
 
+    if (includesEmployee && !company.trim()) {
+      alert("Company is required for employee access.");
+      return;
+    }
+
     const savedUsers = localStorage.getItem("refconnect_users");
     const users: User[] = savedUsers ? JSON.parse(savedUsers) : [];
 
@@ -69,10 +96,10 @@ export default function SignupPage() {
       resumeLink: includesCandidate ? resumeLink || undefined : undefined,
     };
 
-    const updatedUsers = [newUser, ...users];
-
-    localStorage.setItem("refconnect_users", JSON.stringify(updatedUsers));
+    localStorage.setItem("refconnect_users", JSON.stringify([newUser, ...users]));
     localStorage.setItem("refconnect_current_user", JSON.stringify(newUser));
+
+    window.dispatchEvent(new Event("refconnect_user_updated"));
 
     if (roles.includes("candidate") && roles.includes("employee")) {
       router.push("/dashboard");
@@ -84,164 +111,175 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <div className="mx-auto max-w-xl text-center">
-        <h1 className="text-3xl font-bold">Create your RefConnect account</h1>
+    <main className="min-h-screen bg-gray-50 px-6 py-12">
+      <div className="mx-auto max-w-4xl">
+        <div className="text-center">
+          <p className="text-sm font-medium text-blue-600">
+            Create your account
+          </p>
 
-        <p className="mt-2 text-sm text-gray-600">
-          Tell us how you want to use RefConnect. You can request referrals,
-          give referrals, or do both.
-        </p>
-      </div>
-
-      <form onSubmit={handleSignup} className="mt-8 space-y-6">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Name</label>
-
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-              placeholder="Prithvi"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Email</label>
-
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-3 block text-sm font-medium">
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-950 md:text-4xl">
             How do you want to use RefConnect?
-          </label>
+          </h1>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => setUsageType("candidate")}
-              className={`rounded-lg border p-4 text-left ${
-                usageType === "candidate"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200"
-              }`}
-            >
-              <h2 className="font-semibold">I want referrals</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Browse jobs and request referrals from employees.
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setUsageType("employee")}
-              className={`rounded-lg border p-4 text-left ${
-                usageType === "employee"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200"
-              }`}
-            >
-              <h2 className="font-semibold">I can refer others</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Share open roles and manage referral requests.
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setUsageType("both")}
-              className={`rounded-lg border p-4 text-left ${
-                usageType === "both"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200"
-              }`}
-            >
-              <h2 className="font-semibold">Both</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Request referrals and also refer candidates.
-              </p>
-            </button>
-          </div>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-gray-600">
+            Choose how you want to start. You can request referrals, refer
+            candidates, or do both.
+          </p>
         </div>
 
-        {includesEmployee && (
+        <form
+          onSubmit={handleSignup}
+          className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+        >
           <div>
-            <label className="mb-1 block text-sm font-medium">Company</label>
+            <label className="mb-3 block text-sm font-medium text-gray-900">
+              Select your usage
+            </label>
 
-            <input
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-              placeholder="Oracle / Google / Amazon"
-              required
-            />
+            <div className="grid gap-4 md:grid-cols-3">
+              {usageOptions.map((option) => {
+                const isSelected = usageType === option.value;
 
-            <p className="mt-1 text-xs text-gray-500">
-              This is used when you post jobs or give referrals.
-            </p>
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setUsageType(option.value)}
+                    className={`rounded-2xl border p-5 text-left transition ${
+                      isSelected
+                        ? "border-blue-600 bg-blue-50 shadow-sm"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <div
+                      className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${
+                        isSelected
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {option.value === "candidate" && "C"}
+                      {option.value === "employee" && "E"}
+                      {option.value === "both" && "B"}
+                    </div>
+
+                    <h2 className="font-semibold text-gray-950">
+                      {option.title}
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      {option.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        )}
 
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            LinkedIn Profile
-          </label>
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-900">
+                Name
+              </label>
 
-          <input
-            type="url"
-            value={linkedinUrl}
-            onChange={(e) => setLinkedinUrl(e.target.value)}
-            className="w-full rounded border px-3 py-2"
-            placeholder="https://linkedin.com/in/your-profile"
-          />
-        </div>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+                placeholder="Prithvi"
+                required
+              />
+            </div>
 
-        {includesCandidate && (
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Resume Link
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-900">
+                Email
+              </label>
+
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+          </div>
+
+          {includesEmployee && (
+            <div className="mt-5">
+              <label className="mb-1 block text-sm font-medium text-gray-900">
+                Company
+              </label>
+
+              <input
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+                placeholder="Oracle / Google / Amazon"
+                required
+              />
+
+              <p className="mt-1 text-xs text-gray-500">
+                Employees can only post jobs from their profile company.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <label className="mb-1 block text-sm font-medium text-gray-900">
+              LinkedIn Profile
             </label>
 
             <input
               type="url"
-              value={resumeLink}
-              onChange={(e) => setResumeLink(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-              placeholder="https://drive.google.com/..."
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+              placeholder="https://linkedin.com/in/your-profile"
             />
-
-            <p className="mt-1 text-xs text-gray-500">
-              Optional for now. You can also provide it while requesting a
-              referral.
-            </p>
           </div>
-        )}
 
-        <button
-          type="submit"
-          className="w-full rounded bg-blue-600 px-4 py-2 text-white"
-        >
-          Create Account
-        </button>
+          {includesCandidate && (
+            <div className="mt-5">
+              <label className="mb-1 block text-sm font-medium text-gray-900">
+                Resume Link
+              </label>
 
-        <p className="text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link href="/auth/login" className="text-blue-600 underline">
-            Login
-          </Link>
-        </p>
-      </form>
-    </div>
+              <input
+                type="url"
+                value={resumeLink}
+                onChange={(e) => setResumeLink(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+                placeholder="https://drive.google.com/..."
+              />
+
+              <p className="mt-1 text-xs text-gray-500">
+                Optional for now. You can also add it while requesting a
+                referral.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-600">
+              Already have an account?{" "}
+              <Link href="/auth/login" className="text-blue-600 underline">
+                Login
+              </Link>
+            </p>
+
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Create Account
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
   );
 }

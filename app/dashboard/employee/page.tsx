@@ -47,7 +47,9 @@ type ReferralRequest = {
   jobId: string;
   jobTitle: string;
   jobLink: string;
-  resumeLink: string;
+  resumeLink?: string;
+resumeFileName?: string;
+resumeDataUrl?: string;
   linkedinLink: string;
   status: RequestStatus;
   referralLink?: string;
@@ -508,14 +510,28 @@ const appliedCount = visibleRequests.filter(
                   
 
                   <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                    <a
-                      href={request.resumeLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-600 underline"
-                    >
-                      Resume
-                    </a>
+                    {request.resumeDataUrl ? (
+  <a
+    href={request.resumeDataUrl}
+    download={request.resumeFileName || "resume.pdf"}
+    target="_blank"
+    rel="noreferrer"
+    className="text-blue-600 underline"
+  >
+    Resume PDF
+  </a>
+) : request.resumeLink ? (
+  <a
+    href={request.resumeLink}
+    target="_blank"
+    rel="noreferrer"
+    className="text-blue-600 underline"
+  >
+    Resume Link
+  </a>
+) : (
+  <span className="text-gray-400">No resume</span>
+)}
 
                     <a
                       href={request.linkedinLink}

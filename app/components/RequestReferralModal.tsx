@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type SubmitEventHandler } from "react";
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type SubmitEventHandler,
+} from "react";
 
 type UserRole = "candidate" | "employee";
+type ResumeMode = "file" | "link";
 
 type User = {
   id: string;
@@ -36,7 +42,9 @@ type ReferralRequest = {
   jobTitle: string;
   company: string;
   jobLink: string;
-  resumeLink: string;
+  resumeLink?: string;
+  resumeFileName?: string;
+  resumeDataUrl?: string;
   linkedinLink: string;
   status: "pending" | "approved" | "rejected" | "applied";
   referralLink?: string;
@@ -45,17 +53,13 @@ type ReferralRequest = {
 
 function getUserRoles(user: User | null): UserRole[] {
   if (!user) return [];
-
-  if (user.roles) {
-    return user.roles;
-  }
-
-  if (user.role) {
-    return [user.role];
-  }
-
+  if (user.roles) return user.roles;
+  if (user.role) return [user.role];
   return [];
 }
+
+const MAX_RESUME_SIZE_MB = 2;
+const MAX_RESUME_SIZE_BYTES = MAX_RESUME_SIZE_MB * 1024 * 1024;
 
 export default function RequestReferralModal({
   jobId,
@@ -68,7 +72,12 @@ export default function RequestReferralModal({
   const [loadingUser, setLoadingUser] = useState(true);
   const [open, setOpen] = useState(false);
 
+  const [resumeMode, setResumeMode] = useState<ResumeMode>("file");
   const [resumeLink, setResumeLink] = useState("");
+  const [resumeFileName, setResumeFileName] = useState("");
+  const [resumeDataUrl, setResumeDataUrl] = useState("");
+  const [resumeError, setResumeError] = useState("");
+
   const [linkedinLink, setLinkedinLink] = useState("");
   const [message, setMessage] = useState("");
 
@@ -92,13 +101,12 @@ export default function RequestReferralModal({
 
       setCurrentUser(parsedUser);
 
-      if (parsedUser.resumeLink) {
-        setResumeLink(parsedUser.resumeLink);
-      }
+     setResumeLink(parsedUser.resumeLink || "");
+setLinkedinLink(parsedUser.linkedinUrl || "");
 
-      if (parsedUser.linkedinUrl) {
-        setLinkedinLink(parsedUser.linkedinUrl);
-      }
+if (parsedUser.resumeLink) {
+  setResumeMode("link");
+}
     }
 
     setLoadingUser(false);
@@ -109,9 +117,7 @@ export default function RequestReferralModal({
 
     const savedRequests = localStorage.getItem("refconnect_requests");
 
-    if (!savedRequests) {
-      return;
-    }
+    if (!savedRequests) return;
 
     const existingRequests: ReferralRequest[] = JSON.parse(savedRequests);
 
@@ -131,6 +137,41 @@ export default function RequestReferralModal({
     setAlreadyRequested(duplicateRequest);
   }, [currentUser, jobId]);
 
+  const handleResumeFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+
+    setResumeError("");
+    setResumeFileName("");
+    setResumeDataUrl("");
+
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      setResumeError("Please upload a PDF file.");
+      return;
+    }
+
+    if (file.size > MAX_RESUME_SIZE_BYTES) {
+      setResumeError(
+        `For this prototype, please upload a PDF smaller than ${MAX_RESUME_SIZE_MB}MB.`
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setResumeFileName(file.name);
+      setResumeDataUrl(String(reader.result));
+    };
+
+    reader.onerror = () => {
+      setResumeError("Could not read this file. Please try another PDF.");
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
 
@@ -146,6 +187,14 @@ export default function RequestReferralModal({
 
     if (isOwnJob) {
       alert("You cannot request a referral for your own job post.");
+      return;
+    }
+
+    const hasResumeFile = resumeMode === "file" && resumeFileName && resumeDataUrl;
+    const hasResumeLink = resumeMode === "link" && resumeLink.trim();
+
+    if (!hasResumeFile && !hasResumeLink) {
+      alert("Please upload a resume PDF or paste a resume link.");
       return;
     }
 
@@ -184,15 +233,24 @@ export default function RequestReferralModal({
       jobTitle,
       company,
       jobLink,
-      resumeLink,
+      resumeLink: resumeMode === "link" ? resumeLink : undefined,
+      resumeFileName: resumeMode === "file" ? resumeFileName : undefined,
+      resumeDataUrl: resumeMode === "file" ? resumeDataUrl : undefined,
       linkedinLink,
       status: "pending",
     };
 
-    localStorage.setItem(
-      "refconnect_requests",
-      JSON.stringify([newRequest, ...existingRequests])
-    );
+    try {
+      localStorage.setItem(
+        "refconnect_requests",
+        JSON.stringify([newRequest, ...existingRequests])
+      );
+    } catch {
+      alert(
+        "Could not save the resume file in this prototype. Try using a resume link instead."
+      );
+      return;
+    }
 
     setAlreadyRequested(true);
 
@@ -299,22 +357,76 @@ export default function RequestReferralModal({
 
             <form onSubmit={handleSubmit} className="mt-5 space-y-5">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-900">
-                  Resume Link
+                <label className="mb-2 block text-sm font-medium text-gray-900">
+                  Resume
                 </label>
 
-                <input
-                  type="url"
-                  value={resumeLink}
-                  onChange={(e) => setResumeLink(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
-                  placeholder="https://drive.google.com/..."
-                  required
-                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setResumeMode("file")}
+                    className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+                      resumeMode === "file"
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Upload PDF
+                  </button>
 
-                <p className="mt-1 text-xs text-gray-500">
-                  Share a public resume link that the employee can review.
-                </p>
+                  <button
+                    type="button"
+                    onClick={() => setResumeMode("link")}
+                    className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+                      resumeMode === "link"
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Paste Link
+                  </button>
+                </div>
+
+                {resumeMode === "file" ? (
+                  <div className="mt-3">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handleResumeFileChange}
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
+                    />
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      PDF only. Prototype limit: {MAX_RESUME_SIZE_MB}MB.
+                    </p>
+
+                    {resumeFileName && (
+                      <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                        Selected: {resumeFileName}
+                      </p>
+                    )}
+
+                    {resumeError && (
+                      <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                        {resumeError}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <input
+                      type="url"
+                      value={resumeLink || ""}
+                      onChange={(e) => setResumeLink(e.target.value)}
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+                      placeholder="https://drive.google.com/..."
+                    />
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Paste a public resume link if you prefer not to upload.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>

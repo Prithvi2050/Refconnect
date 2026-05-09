@@ -608,41 +608,41 @@ const appliedCount = visibleRequests.filter(
 
       <form onSubmit={submitNewJob} className="mt-4 space-y-4">
         <div>
-  <label className="mb-1 block text-sm font-medium">
-    Company
-  </label>
+          <label className="mb-1 block text-sm font-medium">
+            Job Title
+          </label>
 
-  <div className="w-full rounded border bg-gray-50 px-3 py-2 text-gray-700">
-    {currentUser?.company || "Company not set"}
-  </div>
-
-  <p className="mt-1 text-xs text-gray-500">
-    Company is locked from your profile because employees can only post roles
-    from their own company.
-  </p>
-
-  {!currentUser?.company && (
-    <a
-      href="/profile"
-      className="mt-2 inline-block text-sm text-blue-600 underline"
-    >
-      Update company in Profile
-    </a>
-  )}
-</div>
+          <input
+            value={newJobTitle}
+            onChange={(e) => setNewJobTitle(e.target.value)}
+            className="w-full rounded border px-3 py-2"
+            placeholder="Software Engineer, Backend"
+            required
+          />
+        </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium">
             Company
           </label>
 
-          <input
-            value={newJobCompany}
-            onChange={(e) => setNewJobCompany(e.target.value)}
-            className="w-full rounded border px-3 py-2"
-            placeholder="Google"
-            required
-          />
+          <div className="w-full rounded border bg-gray-50 px-3 py-2 text-gray-700">
+            {currentUser?.company || "Company not set"}
+          </div>
+
+          <p className="mt-1 text-xs text-gray-500">
+            Company is locked from your profile because employees can only post roles
+            from their own company.
+          </p>
+
+          {!currentUser?.company && (
+            <a
+              href="/profile"
+              className="mt-2 inline-block text-sm text-blue-600 underline"
+            >
+              Update company in Profile
+            </a>
+          )}
         </div>
 
         <div>

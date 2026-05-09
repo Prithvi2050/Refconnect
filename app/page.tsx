@@ -3,7 +3,7 @@ import Link from "next/link";
 function UserPlusIcon() {
   return (
     <svg
-      className="h-9 w-9"
+      className="h-6 w-6"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -36,7 +36,7 @@ function BriefcaseIcon() {
 function SearchIcon() {
   return (
     <svg
-      className="h-8 w-8"
+      className="h-6 w-6"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -153,21 +153,21 @@ const flowSteps = [
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
-      <section className="mx-auto flex min-h-[560px] max-w-6xl flex-col items-center justify-center px-6 py-20 text-center">
-        <h1 className="text-5xl font-extrabold tracking-tight text-gray-950 md:text-7xl">
+      <section className="mx-auto flex min-h-[430px] max-w-6xl flex-col items-center justify-center px-6 py-12 text-center">
+        <h1 className="text-4xl font-extrabold tracking-tight text-gray-950 md:text-5xl">
           Referrals,{" "}
           <span className="text-blue-600">organized.</span>
         </h1>
 
-        <p className="mx-auto mt-8 max-w-3xl text-xl leading-9 text-gray-600 md:text-2xl">
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
           A simple way for candidates to request referrals and employees to
           manage them in one clean workflow.
         </p>
 
-        <div className="mt-14 flex w-full max-w-4xl flex-col items-center justify-center gap-6 md:flex-row">
+       <div className="mt-8 flex w-full max-w-2xl flex-col items-center justify-center gap-4 md:flex-row">
           <Link
             href="/auth/signup"
-            className="flex h-24 w-full items-center justify-center gap-6 rounded-2xl bg-blue-600 px-8 text-2xl font-bold text-white shadow-lg hover:bg-blue-700 md:w-[420px]"
+            className="flex h-16 w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 text-lg font-semibold text-white shadow-sm hover:bg-blue-700 md:w-[300px]"
           >
             <UserPlusIcon />
             Get Started
@@ -175,7 +175,7 @@ export default function Home() {
 
           <Link
             href="/jobs"
-            className="flex h-24 w-full items-center justify-center gap-6 rounded-2xl border-2 border-gray-900 bg-white px-8 text-2xl font-bold text-gray-950 hover:bg-gray-50 md:w-[420px]"
+            className="flex h-16 w-full items-center justify-center gap-3 rounded-xl border border-gray-900 bg-white px-6 text-lg font-semibold text-gray-950 hover:bg-gray-50 md:w-[300px]"
           >
             <BriefcaseIcon />
             Browse Jobs
@@ -183,7 +183,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-t bg-gray-50 px-6 py-16">
+      <section className="border-t bg-gray-50 px-6 py-10">
         <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.6fr]">
           <div>
             <h2 className="text-2xl font-bold text-gray-950">
@@ -236,7 +236,7 @@ export default function Home() {
               {flowSteps.map((step, index) => (
                 <div key={step.number} className="flex flex-1 flex-col items-center text-center">
                   <div className="flex items-center">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
                       {step.icon}
                     </div>
 

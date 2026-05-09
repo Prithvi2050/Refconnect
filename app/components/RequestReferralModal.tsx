@@ -65,11 +65,13 @@ export default function RequestReferralModal({
   jobOwnerId,
   jobOwnerEmail,
 }: Props) {
-
+  const [loadingUser, setLoadingUser] = useState(true);
   const [open, setOpen] = useState(false);
+
   const [resumeLink, setResumeLink] = useState("");
   const [linkedinLink, setLinkedinLink] = useState("");
   const [message, setMessage] = useState("");
+
   const [alreadyRequested, setAlreadyRequested] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -77,16 +79,17 @@ export default function RequestReferralModal({
   const canRequestReferral = roles.includes("candidate");
 
   const isOwnJob =
-  currentUser &&
-  ((jobOwnerId && currentUser.id === jobOwnerId) ||
-    (jobOwnerEmail &&
-      currentUser.email.toLowerCase() === jobOwnerEmail.toLowerCase()));
+    currentUser &&
+    ((jobOwnerId && currentUser.id === jobOwnerId) ||
+      (jobOwnerEmail &&
+        currentUser.email.toLowerCase() === jobOwnerEmail.toLowerCase()));
 
   useEffect(() => {
     const savedUser = localStorage.getItem("refconnect_current_user");
 
     if (savedUser) {
       const parsedUser: User = JSON.parse(savedUser);
+
       setCurrentUser(parsedUser);
 
       if (parsedUser.resumeLink) {
@@ -97,6 +100,8 @@ export default function RequestReferralModal({
         setLinkedinLink(parsedUser.linkedinUrl);
       }
     }
+
+    setLoadingUser(false);
   }, []);
 
   useEffect(() => {
@@ -134,13 +139,13 @@ export default function RequestReferralModal({
       return;
     }
 
-    if (isOwnJob) {
-  alert("You cannot request a referral for your own job post.");
-  return;
-}
-
     if (!canRequestReferral) {
       alert("Your current account is not set up to request referrals.");
+      return;
+    }
+
+    if (isOwnJob) {
+      alert("You cannot request a referral for your own job post.");
       return;
     }
 
@@ -184,11 +189,9 @@ export default function RequestReferralModal({
       status: "pending",
     };
 
-    const updatedRequests = [newRequest, ...existingRequests];
-
     localStorage.setItem(
       "refconnect_requests",
-      JSON.stringify(updatedRequests)
+      JSON.stringify([newRequest, ...existingRequests])
     );
 
     setAlreadyRequested(true);
@@ -199,44 +202,60 @@ export default function RequestReferralModal({
     setMessage("");
   };
 
+  if (loadingUser) {
+    return (
+      <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+        Checking account access...
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return (
-      <div className="mt-6 rounded border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-        Please{" "}
-        <Link href="/auth/login" className="underline">
-          login
-        </Link>{" "}
-        or{" "}
-        <Link href="/auth/signup" className="underline">
-          sign up
-        </Link>{" "}
-        to request a referral.
+      <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+        <p className="font-medium">Login required</p>
+
+        <p className="mt-1 leading-6">
+          Please{" "}
+          <Link href="/auth/login" className="font-medium underline">
+            login
+          </Link>{" "}
+          or{" "}
+          <Link href="/auth/signup" className="font-medium underline">
+            sign up
+          </Link>{" "}
+          to request a referral.
+        </p>
       </div>
     );
   }
 
   if (!canRequestReferral) {
     return (
-      <div className="mt-6 rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+      <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
         This account is set up for giving referrals only. To request referrals,
-        use a candidate or both-role account.
+        update your profile to candidate or both-role access.
       </div>
     );
   }
 
   if (isOwnJob) {
-  return (
-    <div className="mt-6 rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-      You posted this job. You can manage it from your Employee Dashboard.
-    </div>
-  );
-}
+    return (
+      <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+        You posted this job. You can manage it from your Employee Dashboard.
+      </div>
+    );
+  }
 
   if (alreadyRequested) {
     return (
-      <div className="mt-6 rounded border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-        You have already requested a referral for this job. Track the status in
-        your Candidate Dashboard.
+      <div className="mt-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+        <p className="font-medium">Referral already requested</p>
+
+        <p className="mt-1 leading-6">
+          You have already requested a referral for this job. Track the status
+          in your Candidate Dashboard.
+        </p>
       </div>
     );
   }
@@ -245,28 +264,42 @@ export default function RequestReferralModal({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="mt-6 bg-blue-600 text-white px-5 py-2 rounded"
+        className="mt-6 w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
       >
         Request Referral
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="text-xl font-bold">Request Referral</h2>
-
-            <p className="mt-1 text-sm text-gray-600">{jobTitle}</p>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Requesting as:{" "}
-              <span className="font-medium text-gray-700">
-                {currentUser.name}
-              </span>
-            </p>
-
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <h2 className="text-xl font-bold text-gray-950">
+                  Request Referral
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-600">{jobTitle}</p>
+              </div>
+
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
+              Requesting as{" "}
+              <span className="font-semibold">{currentUser.name}</span>
+              {currentUser.email && (
+                <span className="text-blue-700"> · {currentUser.email}</span>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-900">
                   Resume Link
                 </label>
 
@@ -274,65 +307,71 @@ export default function RequestReferralModal({
                   type="url"
                   value={resumeLink}
                   onChange={(e) => setResumeLink(e.target.value)}
-                  className="w-full rounded border px-3 py-2"
-                  placeholder="https://..."
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+                  placeholder="https://drive.google.com/..."
                   required
                 />
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Share a public resume link that the employee can review.
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  LinkedIn Link
+                <label className="mb-1 block text-sm font-medium text-gray-900">
+                  LinkedIn Profile
                 </label>
 
                 <input
                   type="url"
                   value={linkedinLink}
                   onChange={(e) => setLinkedinLink(e.target.value)}
-                  className="w-full rounded border px-3 py-2"
-                  placeholder="https://linkedin.com/in/..."
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
+                  placeholder="https://linkedin.com/in/your-profile"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Message to employee (optional)
+                <label className="mb-1 block text-sm font-medium text-gray-900">
+                  Message to employee{" "}
+                  <span className="text-gray-500">(optional)</span>
                 </label>
 
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full rounded border px-3 py-2"
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
                   rows={4}
                   placeholder="Write a short note about why you are a good fit..."
                 />
               </div>
 
-              <div className="text-sm text-gray-500">
-                Job link:{" "}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+                <p className="font-medium text-gray-900">Original job post</p>
+
                 <a
                   href={jobLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-blue-600 underline"
+                  className="mt-2 inline-block text-blue-600 underline"
                 >
-                  open job post
+                  Open original job post
                 </a>
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded border px-4 py-2"
+                  className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded bg-blue-600 px-4 py-2 text-white"
+                  className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Submit Request
                 </button>

@@ -22,6 +22,8 @@ type Job = {
   createdByEmail?: string;
 };
 
+const JOBS_PER_PAGE = 9;
+
 const fallbackJobs: Job[] = [
   {
     id: "1",
@@ -90,6 +92,7 @@ export default function JobsPage() {
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const savedJobs = localStorage.getItem("refconnect_jobs");
@@ -101,6 +104,10 @@ export default function JobsPage() {
 
     setJobs(normalizedJobs.filter((job) => job.status === "active"));
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedLocation, selectedCompany, sortBy]);
 
   const locations = useMemo(() => getUniqueValues(jobs, "location"), [jobs]);
   const companies = useMemo(() => getUniqueValues(jobs, "company"), [jobs]);
@@ -133,7 +140,7 @@ export default function JobsPage() {
       return matchesSearch && matchesLocation && matchesCompany;
     });
 
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       if (sortBy === "expiring") {
         return a.daysLeft - b.daysLeft;
       }
@@ -154,15 +161,36 @@ export default function JobsPage() {
     });
   }, [jobs, searchTerm, selectedLocation, selectedCompany, sortBy]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / JOBS_PER_PAGE));
+
+  const startIndex = (currentPage - 1) * JOBS_PER_PAGE;
+  const endIndex = startIndex + JOBS_PER_PAGE;
+
+  const paginatedJobs = filteredJobs.slice(startIndex, endIndex);
+
+  const showingStart =
+    filteredJobs.length === 0 ? 0 : startIndex + 1;
+
+  const showingEnd = Math.min(endIndex, filteredJobs.length);
+
   const clearFilters = () => {
     setSearchTerm("");
     setSelectedLocation("all");
     setSelectedCompany("all");
     setSortBy("newest");
+    setCurrentPage(1);
   };
 
   const hasActiveFilters =
     searchTerm || selectedLocation !== "all" || selectedCompany !== "all";
+
+  const goToPreviousPage = () => {
+    setCurrentPage((page) => Math.max(1, page - 1));
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage((page) => Math.min(totalPages, page + 1));
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 px-6 py-10">
@@ -275,11 +303,18 @@ export default function JobsPage() {
           </div>
         </section>
 
-        <div className="mt-5 flex items-center justify-between">
+        <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p className="text-sm text-gray-600">
-            Showing {filteredJobs.length} active referral{" "}
+            Showing {showingStart}–{showingEnd} of {filteredJobs.length} active
+            referral{" "}
             {filteredJobs.length === 1 ? "opportunity" : "opportunities"}
           </p>
+
+          {filteredJobs.length > JOBS_PER_PAGE && (
+            <p className="text-sm text-gray-500">
+              Page {currentPage} of {totalPages}
+            </p>
+          )}
         </div>
 
         {filteredJobs.length === 0 ? (
@@ -301,11 +336,37 @@ export default function JobsPage() {
             </button>
           </div>
         ) : (
-          <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {filteredJobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </div>
+          <>
+            <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {paginatedJobs.map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))}
+            </div>
+
+            {filteredJobs.length > JOBS_PER_PAGE && (
+              <div className="mt-8 flex items-center justify-center gap-3">
+                <button
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 1}
+                  className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+
+                <div className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </div>
+
+                <button
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

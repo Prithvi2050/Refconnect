@@ -55,7 +55,8 @@ resumeDataUrl?: string;
   referralLink?: string;
   employeeMessage?: string;
 };
-
+const JOBS_PER_PAGE = 5;
+const REQUESTS_PER_PAGE = 8;
 const initialJobs: Job[] = [
   {
     id: "1",
@@ -167,7 +168,8 @@ export default function EmployeeDashboardPage() {
   const [selectedFilter, setSelectedFilter] = useState<"all" | RequestStatus>(
     "all"
   );
-
+const [currentJobsPage, setCurrentJobsPage] = useState(1);
+const [currentRequestsPage, setCurrentRequestsPage] = useState(1);
   const [approveRequest, setApproveRequest] =
     useState<ReferralRequest | null>(null);
 
@@ -186,7 +188,9 @@ export default function EmployeeDashboardPage() {
 
   useEffect(() => {
     const savedUser = localStorage.getItem("refconnect_current_user");
-
+useEffect(() => {
+  setCurrentRequestsPage(1);
+}, [selectedFilter]);
 if (savedUser) {
   setCurrentUser(JSON.parse(savedUser));
 }
@@ -256,7 +260,7 @@ const newJob: Job = {
   createdByEmail: currentUser.email,
 };
     saveJobs([newJob, ...jobs]);
-
+setCurrentJobsPage(1);
 setNewJobTitle("");
 setNewJobCompany(currentUser.company);
 setNewJobLocation("");
@@ -283,6 +287,7 @@ setIsAddJobOpen(false);
   const deleteJob = (jobId: string) => {
     const updatedJobs = jobs.filter((job) => job.id !== jobId);
     saveJobs(updatedJobs);
+    setCurrentJobsPage(1);
   };
 
   const openApproveModal = (request: ReferralRequest) => {
@@ -370,6 +375,58 @@ const appliedCount = visibleRequests.filter(
   (request) => request.status === "applied"
 ).length;
 
+// My Jobs pagination
+const totalJobPages = Math.max(1, Math.ceil(myJobs.length / JOBS_PER_PAGE));
+const safeJobsPage = Math.min(currentJobsPage, totalJobPages);
+
+const jobsStartIndex = (safeJobsPage - 1) * JOBS_PER_PAGE;
+const jobsEndIndex = jobsStartIndex + JOBS_PER_PAGE;
+
+const paginatedJobs = myJobs.slice(jobsStartIndex, jobsEndIndex);
+
+const jobsShowingStart = myJobs.length === 0 ? 0 : jobsStartIndex + 1;
+const jobsShowingEnd = Math.min(jobsEndIndex, myJobs.length);
+
+// Requests pagination
+const totalRequestPages = Math.max(
+  1,
+  Math.ceil(filteredRequests.length / REQUESTS_PER_PAGE)
+);
+
+const safeRequestsPage = Math.min(currentRequestsPage, totalRequestPages);
+
+const requestsStartIndex = (safeRequestsPage - 1) * REQUESTS_PER_PAGE;
+const requestsEndIndex = requestsStartIndex + REQUESTS_PER_PAGE;
+
+const paginatedRequests = filteredRequests.slice(
+  requestsStartIndex,
+  requestsEndIndex
+);
+
+const requestsShowingStart =
+  filteredRequests.length === 0 ? 0 : requestsStartIndex + 1;
+
+const requestsShowingEnd = Math.min(
+  requestsEndIndex,
+  filteredRequests.length
+);
+
+const goToPreviousJobsPage = () => {
+  setCurrentJobsPage((page) => Math.max(1, page - 1));
+};
+
+const goToNextJobsPage = () => {
+  setCurrentJobsPage((page) => Math.min(totalJobPages, page + 1));
+};
+
+const goToPreviousRequestsPage = () => {
+  setCurrentRequestsPage((page) => Math.max(1, page - 1));
+};
+
+const goToNextRequestsPage = () => {
+  setCurrentRequestsPage((page) => Math.min(totalRequestPages, page + 1));
+};
+
  return (
   <RequireRole role="employee">
     <div className="p-6 max-w-6xl mx-auto">
@@ -419,9 +476,44 @@ const appliedCount = visibleRequests.filter(
 
       <section className="mt-8">
         <h2 className="text-xl font-bold">My Jobs</h2>
+        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+  <p className="text-sm text-gray-600">
+    Showing {jobsShowingStart}–{jobsShowingEnd} of {myJobs.length} job
+    {myJobs.length === 1 ? "" : "s"}
+  </p>
 
+  {myJobs.length > JOBS_PER_PAGE && (
+    <p className="text-sm text-gray-500">
+      Page {safeJobsPage} of {totalJobPages}
+    </p>
+  )}
+</div>
+
+{myJobs.length > JOBS_PER_PAGE && (
+  <div className="mt-5 flex items-center justify-center gap-3">
+    <button
+      onClick={goToPreviousJobsPage}
+      disabled={safeJobsPage === 1}
+      className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      Previous
+    </button>
+
+    <div className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+      Page {safeJobsPage} of {totalJobPages}
+    </div>
+
+    <button
+      onClick={goToNextJobsPage}
+      disabled={safeJobsPage === totalJobPages}
+      className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      Next
+    </button>
+  </div>
+)}
         <div className="mt-4 grid gap-4">
-          {myJobs.map((job) => (
+          {paginatedJobs.map((job) => (
             <div
               key={job.id}
               className="rounded-lg border p-5 shadow-sm flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
@@ -501,11 +593,45 @@ const appliedCount = visibleRequests.filter(
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="font-semibold">{request.candidateName}</h3>
+<div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+  <p className="text-sm text-gray-600">
+    Showing {requestsShowingStart}–{requestsShowingEnd} of{" "}
+    {filteredRequests.length} request
+    {filteredRequests.length === 1 ? "" : "s"}
+  </p>
 
+  {filteredRequests.length > REQUESTS_PER_PAGE && (
+    <p className="text-sm text-gray-500">
+      Page {safeRequestsPage} of {totalRequestPages}
+    </p>
+  )}
+</div>
 {request.candidateEmail && (
   <p className="text-sm text-gray-500">{request.candidateEmail}</p>
 )}
+{filteredRequests.length > REQUESTS_PER_PAGE && (
+  <div className="mt-5 flex items-center justify-center gap-3">
+    <button
+      onClick={goToPreviousRequestsPage}
+      disabled={safeRequestsPage === 1}
+      className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      Previous
+    </button>
 
+    <div className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+      Page {safeRequestsPage} of {totalRequestPages}
+    </div>
+
+    <button
+      onClick={goToNextRequestsPage}
+      disabled={safeRequestsPage === totalRequestPages}
+      className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      Next
+    </button>
+  </div>
+)}
 <p className="text-sm text-gray-600">{request.jobTitle}</p>
                   
 

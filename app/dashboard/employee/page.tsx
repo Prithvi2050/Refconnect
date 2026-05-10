@@ -188,9 +188,7 @@ const [currentRequestsPage, setCurrentRequestsPage] = useState(1);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("refconnect_current_user");
-useEffect(() => {
-  setCurrentRequestsPage(1);
-}, [selectedFilter]);
+
 if (savedUser) {
   setCurrentUser(JSON.parse(savedUser));
 }
@@ -214,7 +212,9 @@ localStorage.setItem("refconnect_jobs", JSON.stringify(normalizedJobs));
     );
   }
 }, []);
-
+useEffect(() => {
+  setCurrentRequestsPage(1);
+}, [selectedFilter]);
 const saveJobs = (updatedJobs: Job[]) => {
   const normalizedJobs = normalizeJobs(updatedJobs);
 

@@ -107,7 +107,10 @@ setLoading(false);
     if (!currentUser) {
       return;
     }
-
+      if (employeeIntent && usageType === "candidate") {
+  alert("To share a job, please choose Employee or Both.");
+  return;
+}
     if (includesEmployee && !company.trim()) {
       alert("Company is required for employee access.");
       return;
@@ -229,19 +232,32 @@ if (employeeIntent && roles.includes("employee")) {
 
           <div className="grid gap-4 md:grid-cols-3">
             <button
-              type="button"
-              onClick={() => setUsageType("candidate")}
-              className={`rounded-lg border p-4 text-left ${
-                usageType === "candidate"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200"
-              }`}
-            >
-              <h2 className="font-semibold">I want referrals</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Browse jobs and request referrals.
-              </p>
-            </button>
+  type="button"
+  disabled={employeeIntent}
+  onClick={() => {
+    if (employeeIntent) return;
+    setUsageType("candidate");
+  }}
+  className={`rounded-lg border p-4 text-left ${
+    employeeIntent
+      ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
+      : usageType === "candidate"
+        ? "border-blue-600 bg-blue-50"
+        : "border-gray-200"
+  }`}
+>
+  <h2 className="font-semibold">I want referrals</h2>
+
+  <p className="mt-1 text-sm text-gray-600">
+    Browse jobs and request referrals.
+  </p>
+
+  {employeeIntent && (
+    <p className="mt-3 text-xs font-medium text-gray-500">
+      Not available when sharing a job.
+    </p>
+  )}
+</button>
 
             <button
               type="button"

@@ -79,7 +79,10 @@ export default function SignupPage() {
       alert("Company is required for employee access.");
       return;
     }
-
+    if (employeeIntent && usageType === "candidate") {
+  alert("To share a job, please choose Employee or Both.");
+  return;
+}
     const savedUsers = localStorage.getItem("refconnect_users");
     const users: User[] = savedUsers ? JSON.parse(savedUsers) : [];
 
@@ -153,16 +156,22 @@ export default function SignupPage() {
             <div className="grid gap-4 md:grid-cols-3">
               {usageOptions.map((option) => {
                 const isSelected = usageType === option.value;
-
+                  const isDisabled = employeeIntent && option.value === "candidate";
                 return (
                   <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setUsageType(option.value)}
-                    className={`rounded-2xl border p-5 text-left transition ${
-                      isSelected
-                        ? "border-blue-600 bg-blue-50 shadow-sm"
-                        : "border-gray-200 bg-white hover:bg-gray-50"
+  key={option.value}
+  type="button"
+  disabled={isDisabled}
+  onClick={() => {
+    if (isDisabled) return;
+    setUsageType(option.value);
+  }}
+  className={`rounded-2xl border p-5 text-left transition ${
+                      isDisabled
+  ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
+  : isSelected
+    ? "border-blue-600 bg-blue-50 shadow-sm"
+    : "border-gray-200 bg-white hover:bg-gray-50"
                     }`}
                   >
                     <div
@@ -184,6 +193,12 @@ export default function SignupPage() {
                     <p className="mt-2 text-sm leading-6 text-gray-600">
                       {option.description}
                     </p>
+
+                    {isDisabled && (
+  <p className="mt-3 text-xs font-medium text-gray-500">
+    Not available when sharing a job.
+  </p>
+)}
                   </button>
                 );
               })}

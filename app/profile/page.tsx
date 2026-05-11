@@ -47,7 +47,7 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-
+  const [employeeIntent, setEmployeeIntent] = useState(false);
   const [name, setName] = useState("");
   const [usageType, setUsageType] = useState<UsageType>("candidate");
   const [company, setCompany] = useState("");
@@ -70,16 +70,27 @@ export default function ProfilePage() {
     }
 
     const parsedUser: User = JSON.parse(savedUser);
-    const roles = getUserRoles(parsedUser);
+const roles = getUserRoles(parsedUser);
 
-    setCurrentUser(parsedUser);
-    setName(parsedUser.name);
-    setUsageType(getUsageTypeFromRoles(roles));
-    setCompany(parsedUser.company || "");
-    setLinkedinUrl(parsedUser.linkedinUrl || "");
-    setResumeLink(parsedUser.resumeLink || "");
+const params = new URLSearchParams(window.location.search);
+const wantsEmployeeAccess = params.get("intent") === "employee";
 
-    setLoading(false);
+setEmployeeIntent(wantsEmployeeAccess);
+
+setCurrentUser(parsedUser);
+setName(parsedUser.name);
+
+if (wantsEmployeeAccess && !roles.includes("employee")) {
+  setUsageType("both");
+} else {
+  setUsageType(getUsageTypeFromRoles(roles));
+}
+
+setCompany(parsedUser.company || "");
+setLinkedinUrl(parsedUser.linkedinUrl || "");
+setResumeLink(parsedUser.resumeLink || "");
+
+setLoading(false);
   }, [router]);
 
   const getRoles = (): UserRole[] => {
@@ -140,7 +151,12 @@ export default function ProfilePage() {
     window.dispatchEvent(new Event("refconnect_user_updated"));
 
     alert("Profile updated successfully.");
-    router.push("/dashboard");
+
+if (employeeIntent && roles.includes("employee")) {
+  router.push("/dashboard/employee?openAddJob=true");
+} else {
+  router.push("/dashboard");
+}
   };
 
   if (loading) {
@@ -168,10 +184,14 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-3xl font-bold">Profile Settings</h1>
+      <h1 className="text-3xl font-bold">
+  {employeeIntent ? "Add employee access" : "Profile Settings"}
+</h1>
 
       <p className="mt-2 text-sm text-gray-600">
-        Update how you want to use RefConnect.
+        {employeeIntent
+  ? "To share a job, add employee access and your company details."
+  : "Update how you want to use RefConnect."}
       </p>
 
       <form onSubmit={handleSave} className="mt-8 space-y-6">
@@ -308,7 +328,7 @@ export default function ProfilePage() {
             type="submit"
             className="rounded bg-blue-600 px-4 py-2 text-white"
           >
-            Save Profile
+            {employeeIntent ? "Continue to Share Job" : "Save Profile"}
           </button>
         </div>
       </form>

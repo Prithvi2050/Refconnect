@@ -190,7 +190,24 @@ const [currentRequestsPage, setCurrentRequestsPage] = useState(1);
     const savedUser = localStorage.getItem("refconnect_current_user");
 
 if (savedUser) {
-  setCurrentUser(JSON.parse(savedUser));
+  const parsedUser: User = JSON.parse(savedUser);
+
+  const params = new URLSearchParams(window.location.search);
+  const shouldOpenAddJob = params.get("openAddJob") === "true";
+
+  setCurrentUser(parsedUser);
+
+  if (parsedUser.company) {
+    setNewJobCompany(parsedUser.company);
+  }
+
+  if (shouldOpenAddJob) {
+    if (parsedUser.company) {
+      setIsAddJobOpen(true);
+    } else {
+      alert("Please add your company in Profile before posting a job.");
+    }
+  }
 }
 const savedJobs = localStorage.getItem("refconnect_jobs");
 

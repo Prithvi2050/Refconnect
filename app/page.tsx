@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 function UserPlusIcon() {
   return (
@@ -150,7 +153,46 @@ const flowSteps = [
   },
 ];
 
+type UserRole = "candidate" | "employee";
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  roles?: UserRole[];
+  role?: UserRole;
+  company?: string;
+};
+
+function getUserRoles(user: User | null): UserRole[] {
+  if (!user) return [];
+  if (user.roles) return user.roles;
+  if (user.role) return [user.role];
+  return [];
+}
+
 export default function Home() {
+  const [shareJobHref, setShareJobHref] = useState(
+  "/auth/signup?intent=employee"
+);
+
+useEffect(() => {
+  const savedUser = localStorage.getItem("refconnect_current_user");
+
+  if (!savedUser) {
+    setShareJobHref("/auth/signup?intent=employee");
+    return;
+  }
+
+  const user: User = JSON.parse(savedUser);
+  const roles = getUserRoles(user);
+
+  if (roles.includes("employee")) {
+    setShareJobHref("/dashboard/employee?openAddJob=true");
+  } else {
+    setShareJobHref("/profile?intent=employee");
+  }
+}, []);
   return (
     <main className="min-h-screen bg-white">
       <section className="mx-auto flex min-h-[430px] max-w-6xl flex-col items-center justify-center px-6 py-12 text-center">
@@ -159,28 +201,28 @@ export default function Home() {
           <span className="text-blue-600">organized.</span>
         </h1>
 
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
-          A simple way for candidates to request referrals and employees to
-          manage them in one clean workflow.
-        </p>
+     <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
+  Browse roles shared by employees, or share openings from your company and
+  manage referral requests in one clean workflow.
+</p>
 
-       <div className="mt-8 flex w-full max-w-2xl flex-col items-center justify-center gap-4 md:flex-row">
-          <Link
-            href="/auth/signup"
-            className="flex h-16 w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 text-lg font-semibold text-white shadow-sm hover:bg-blue-700 md:w-[300px]"
-          >
-            <UserPlusIcon />
-            Get Started
-          </Link>
+<div className="mt-8 flex w-full max-w-2xl flex-col items-center justify-center gap-4 md:flex-row">
+  <Link
+    href="/jobs"
+    className="flex h-16 w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 text-lg font-semibold text-white shadow-sm hover:bg-blue-700 md:w-[300px]"
+  >
+    <BriefcaseIcon />
+    Browse Jobs
+  </Link>
 
-          <Link
-            href="/jobs"
-            className="flex h-16 w-full items-center justify-center gap-3 rounded-xl border border-gray-900 bg-white px-6 text-lg font-semibold text-gray-950 hover:bg-gray-50 md:w-[300px]"
-          >
-            <BriefcaseIcon />
-            Browse Jobs
-          </Link>
-        </div>
+  <Link
+    href={shareJobHref}
+    className="flex h-16 w-full items-center justify-center gap-3 rounded-xl border border-gray-900 bg-white px-6 text-lg font-semibold text-gray-950 hover:bg-gray-50 md:w-[300px]"
+  >
+    <UserPlusIcon />
+    Share a Job
+  </Link>
+</div>
       </section>
 
       <section className="border-t bg-gray-50 px-6 py-10">

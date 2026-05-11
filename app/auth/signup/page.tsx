@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type SubmitEventHandler } from "react";
+import { useEffect, useState, type SubmitEventHandler } from "react";
 import { useRouter } from "next/navigation";
 
 type UserRole = "candidate" | "employee";
@@ -45,7 +45,7 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [usageType, setUsageType] = useState<UsageType>("candidate");
-
+  const [employeeIntent, setEmployeeIntent] = useState(false);
   const [company, setCompany] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [resumeLink, setResumeLink] = useState("");
@@ -63,7 +63,15 @@ export default function SignupPage() {
 
     return [usageType];
   };
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const intent = params.get("intent");
 
+  if (intent === "employee") {
+    setUsageType("employee");
+    setEmployeeIntent(true);
+  }
+}, []);
   const handleSignup: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
 
@@ -101,13 +109,15 @@ export default function SignupPage() {
 
     window.dispatchEvent(new Event("refconnect_user_updated"));
 
-    if (roles.includes("candidate") && roles.includes("employee")) {
-      router.push("/dashboard");
-    } else if (roles.includes("employee")) {
-      router.push("/dashboard/employee");
-    } else {
-      router.push("/jobs");
-    }
+    if (employeeIntent && roles.includes("employee")) {
+  router.push("/dashboard/employee?openAddJob=true");
+} else if (roles.includes("candidate") && roles.includes("employee")) {
+  router.push("/dashboard");
+} else if (roles.includes("employee")) {
+  router.push("/dashboard/employee");
+} else {
+  router.push("/jobs");
+}
   };
 
   return (
@@ -119,13 +129,16 @@ export default function SignupPage() {
           </p>
 
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-950 md:text-4xl">
-            How do you want to use RefConnect?
-          </h1>
+  {employeeIntent
+    ? "Create your account to share a job"
+    : "How do you want to use RefConnect?"}
+</h1>
 
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-gray-600">
-            Choose how you want to start. You can request referrals, refer
-            candidates, or do both.
-          </p>
+  {employeeIntent
+    ? "Set up your employee profile so you can share roles from your company and manage referral requests."
+    : "Choose how you want to start. You can request referrals, refer candidates, or do both."}
+</p>
         </div>
 
         <form
@@ -266,16 +279,19 @@ export default function SignupPage() {
           <div className="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/auth/login" className="text-blue-600 underline">
-                Login
-              </Link>
+              <Link
+  href={employeeIntent ? "/auth/login?intent=employee" : "/auth/login"}
+  className="text-blue-600 underline"
+>
+  Login
+</Link>
             </p>
 
             <button
               type="submit"
               className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
             >
-              Create Account
+              {employeeIntent ? "Continue to Share Job" : "Create Account"}
             </button>
           </div>
         </form>

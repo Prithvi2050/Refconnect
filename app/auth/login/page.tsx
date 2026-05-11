@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type SubmitEventHandler } from "react";
+import { useEffect, useState, type SubmitEventHandler } from "react";
 import { useRouter } from "next/navigation";
 
 type UserRole = "candidate" | "employee";
@@ -18,7 +18,7 @@ type User = {
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-
+  const [employeeIntent, setEmployeeIntent] = useState(false);
   const getUserRoles = (user: User): UserRole[] => {
     if (user.roles) {
       return user.roles;
@@ -30,7 +30,10 @@ export default function LoginPage() {
 
     return [];
   };
-
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  setEmployeeIntent(params.get("intent") === "employee");
+}, []);
   const handleLogin: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
 
@@ -58,13 +61,17 @@ export default function LoginPage() {
       JSON.stringify(normalizedUser)
     );
 
-    if (roles.includes("candidate") && roles.includes("employee")) {
-      router.push("/dashboard");
-    } else if (roles.includes("employee")) {
-      router.push("/dashboard/employee");
-    } else {
-      router.push("/jobs");
-    }
+    if (employeeIntent && roles.includes("employee")) {
+  router.push("/dashboard/employee?openAddJob=true");
+} else if (employeeIntent && !roles.includes("employee")) {
+  router.push("/profile?intent=employee");
+} else if (roles.includes("candidate") && roles.includes("employee")) {
+  router.push("/dashboard");
+} else if (roles.includes("employee")) {
+  router.push("/dashboard/employee");
+} else {
+  router.push("/jobs");
+}
   };
 
   return (
